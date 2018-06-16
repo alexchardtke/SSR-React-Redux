@@ -8,6 +8,8 @@
 // Now that we're compiling with webpack/babel, we can use import statements
 import 'babel-polyfill'; // lets us use async/await syntax
 import express from 'express';
+import { matchRoutes } from 'react-router-config';
+import Routes from './client/Routes';
 import renderer from './helpers/renderer';
 import createStore from './helpers/createStore';
 
@@ -20,7 +22,17 @@ app.get('*', (req, res) => {
 
 	// Some logic to initialize and load data into the store
 
-	res.send(renderer(req, store));
+	// matchRoutes() returns an array of components that are about to be rendered for the given path
+	const promises = matchRoutes(Routes, req.path).map(({ route }) => {
+		// mapping over the matched routes to call loadData()
+		// pass loadData() the redux store
+		return route.loadData ? route.loadData(store) : null; // if loadData() exists on each route, call it - otherwise return null
+	});
+
+	// wait for loadData() promise to resolve, then render the app
+	Promise.all(promises).then(() => {
+		res.send(renderer(req, store));
+	});
 });
 
 app.listen(3000, () => {
