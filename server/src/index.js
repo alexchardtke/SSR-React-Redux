@@ -9,16 +9,26 @@
 import 'babel-polyfill'; // lets us use async/await syntax
 import express from 'express';
 import { matchRoutes } from 'react-router-config';
+import proxy from 'express-http-proxy';
 import Routes from './client/Routes';
 import renderer from './helpers/renderer';
 import createStore from './helpers/createStore';
 
 const app = express();
 
+app.use('/api', proxy('http://react-ssr-api.herokuapp.com', {
+	// this second argument is just for this api
+	proxyReqOptDecorator(opts) {
+		opts.headers['x-forwarded-host'] = 'localhost:3000';
+		return opts;
+	}
+}));
+
 app.use(express.static('public'));
 
 app.get('*', (req, res) => {
-	const store = createStore();
+	// req includes cookies, which we need for accessing the api
+	const store = createStore(req);
 
 	// Some logic to initialize and load data into the store
 
