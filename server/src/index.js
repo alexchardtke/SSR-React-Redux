@@ -37,11 +37,27 @@ app.get('*', (req, res) => {
 		// mapping over the matched routes to call loadData()
 		// pass loadData() the redux store
 		return route.loadData ? route.loadData(store) : null; // if loadData() exists on each route, call it - otherwise return null
+	}).map(promise => {
+		if (promise) {
+			return new Promise((resolve, reject) => {
+				promise.then(resolve).catch(resolve);
+			});
+		}
 	});
 
 	// wait for loadData() promise to resolve, then render the app
 	Promise.all(promises).then(() => {
-		res.send(renderer(req, store));
+		const context = {};
+		const content = renderer(req, store, context);
+
+		if (context.url) {
+			return res.redirect(302, context.url);
+		};
+		if (context.notFound) {
+			res.status(404);
+		}
+
+		res.send(content);
 	});
 });
 
